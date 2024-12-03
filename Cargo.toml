@@ -1,0 +1,20 @@
+[package]
+name = "readme_generator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ratatui = "0.20.0"
+crossterm = "0.25"
+
+[target.'cfg(target_env = "musl")'.dependencies]
+ratatui = "0.20.0"
+crossterm = "0.25"
+openssl = { version = "0.10", features = ["vendored"] }
+
+[profile.release]
+opt-level = 'z'     # Optimize for size
+lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations
+panic = 'abort'     # Abort on panic
+strip = true        # Strip symbols from binary
