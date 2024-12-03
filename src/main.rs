@@ -8,10 +8,10 @@ use crossterm::{
 };
 use ratatui::{
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Wrap},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame, Terminal,
 };
 
@@ -45,34 +45,76 @@ impl Default for App {
                 Field {
                     name: String::from("Repository Name"),
                     value: String::new(),
-                    description: String::from("The name of your project/repository"),
+                    description: String::from("The name of your project/repository (e.g., username/repo)"),
                 },
                 Field {
-                    name: String::from("Project Description"),
+                    name: String::from("Project Title"),
                     value: String::new(),
-                    description: String::from("A brief description of what your project does"),
+                    description: String::from("A catchy title for your project"),
+                },
+                Field {
+                    name: String::from("Short Description"),
+                    value: String::new(),
+                    description: String::from("A brief one-line description of your project"),
+                },
+                Field {
+                    name: String::from("Detailed Description"),
+                    value: String::new(),
+                    description: String::from("A detailed explanation of what your project does and why it's useful"),
+                },
+                Field {
+                    name: String::from("Features"),
+                    value: String::new(),
+                    description: String::from("Key features of your project (separate with semicolons)"),
+                },
+                Field {
+                    name: String::from("Technologies"),
+                    value: String::new(),
+                    description: String::from("Technologies used (separate with semicolons) e.g., React;TypeScript;Node.js"),
+                },
+                Field {
+                    name: String::from("Prerequisites"),
+                    value: String::new(),
+                    description: String::from("Required software/tools to run your project (separate with semicolons)"),
                 },
                 Field {
                     name: String::from("Installation"),
                     value: String::new(),
-                    description: String::from("Steps required to install your project"),
+                    description: String::from("Step-by-step installation instructions (separate steps with semicolons)"),
                 },
                 Field {
-                    name: String::from("Usage"),
+                    name: String::from("Usage Example"),
                     value: String::new(),
-                    description: String::from("How to use your project, with examples"),
+                    description: String::from("Example code or commands to use your project"),
                 },
                 Field {
-                    name: String::from("Contributors"),
+                    name: String::from("API Documentation"),
                     value: String::new(),
-                    description: String::from("List of contributors and how to contribute"),
+                    description: String::from("Brief API documentation or endpoints (optional)"),
+                },
+                Field {
+                    name: String::from("Contributing Guidelines"),
+                    value: String::new(),
+                    description: String::from("How others can contribute to your project"),
+                },
+                Field {
+                    name: String::from("Tests"),
+                    value: String::new(),
+                    description: String::from("How to run tests (separate steps with semicolons)"),
+                },
+                Field {
+                    name: String::from("Authors"),
+                    value: String::new(),
+                    description: String::from("Project authors/maintainers (separate with semicolons)"),
                 },
             ],
             current_field: 0,
             license_options: vec![
                 String::from("MIT License"),
                 String::from("Apache License 2.0"),
-                String::from("GNU General Public License v3.0"),
+                String::from("GNU GPL v3"),
+                String::from("BSD 3-Clause"),
+                String::from("ISC License"),
             ],
             selected_license: 0,
         }
@@ -85,28 +127,180 @@ impl App {
     }
 
     fn generate_preview(&self) -> String {
-        let repository_name = &self.fields[0].value;
-        let project_description = &self.fields[1].value;
-        let installation = &self.fields[2].value;
-        let usage = &self.fields[3].value;
-        let contributors = &self.fields[4].value;
+        let repo_name = &self.fields[0].value;
+        let project_title = &self.fields[1].value;
+        let short_desc = &self.fields[2].value;
+        let detailed_desc = &self.fields[3].value;
+        let features = self.fields[4].value.split(';').collect::<Vec<_>>();
+        let technologies = self.fields[5].value.split(';').collect::<Vec<_>>();
+        let prerequisites = self.fields[6].value.split(';').collect::<Vec<_>>();
+        let installation = self.fields[7].value.split(';').collect::<Vec<_>>();
+        let usage = &self.fields[8].value;
+        let api_docs = &self.fields[9].value;
+        let contributing = &self.fields[10].value;
+        let tests = self.fields[11].value.split(';').collect::<Vec<_>>();
+        let authors = self.fields[12].value.split(';').collect::<Vec<_>>();
         let license = &self.license_options[self.selected_license];
 
-        let stars_badge = if !repository_name.is_empty() {
-            format!("[![GitHub stars](https://img.shields.io/github/stars/{repository_name})](https://github.com/{repository_name}/stargazers)")
+        let mut badges = Vec::new();
+        if !repo_name.is_empty() {
+            badges.push(format!("[![Stars](https://img.shields.io/github/stars/{repo_name}?style=flat-square)](https://github.com/{repo_name}/stargazers)"));
+            badges.push(format!("[![Forks](https://img.shields.io/github/forks/{repo_name}?style=flat-square)](https://github.com/{repo_name}/network/members)"));
+            badges.push(format!("[![Issues](https://img.shields.io/github/issues/{repo_name}?style=flat-square)](https://github.com/{repo_name}/issues)"));
+            badges.push(format!("[![License](https://img.shields.io/github/license/{repo_name}?style=flat-square)](https://github.com/{repo_name}/blob/main/LICENSE)"));
+        }
+
+        let tech_badges: Vec<String> = technologies.iter()
+            .filter(|&t| !t.is_empty())
+            .map(|tech| {
+                let tech = tech.trim().to_lowercase();
+                format!("![{}](https://img.shields.io/badge/-{}-informational?style=flat-square&logo={}&logoColor=white)",
+                    tech, tech, tech)
+            })
+            .collect();
+
+        let features_list = if features.is_empty() || features[0].is_empty() {
+            String::from("- <Features of your project>")
         } else {
-            String::new()
+            features.iter()
+                .map(|f| format!("- {}", f.trim()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+
+        let prereq_list = if prerequisites.is_empty() || prerequisites[0].is_empty() {
+            String::from("- <Prerequisites>")
+        } else {
+            prerequisites.iter()
+                .map(|p| format!("- {}", p.trim()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+
+        let install_steps = if installation.is_empty() || installation[0].is_empty() {
+            String::from("1. <Installation steps>")
+        } else {
+            installation.iter()
+                .enumerate()
+                .map(|(i, step)| format!("{}. {}", i + 1, step.trim()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+
+        let test_steps = if tests.is_empty() || tests[0].is_empty() {
+            String::from("1. <Test instructions>")
+        } else {
+            tests.iter()
+                .enumerate()
+                .map(|(i, step)| format!("{}. {}", i + 1, step.trim()))
+                .collect::<Vec<_>>()
+                .join("\n")
         };
 
         format!(
-            "# {}\n{}\n\n{}\n\n## Installation\n```\n{}\n```\n\n## Usage\n```\n{}\n```\n\n## Contributors\n{}\n\n## License\nThis project is licensed under the {} - see the LICENSE file for details.",
-            if repository_name.is_empty() { "<Repository Name>" } else { repository_name },
-            if project_description.is_empty() { "<Project Description>" } else { project_description },
-            if !repository_name.is_empty() { &stars_badge } else { "" },
-            if installation.is_empty() { "<Installation Instructions>" } else { installation },
-            if usage.is_empty() { "<Usage Instructions>" } else { usage },
-            if contributors.is_empty() { "<Contributors>" } else { contributors },
-            license
+r#"<div align="center">
+
+# {}
+
+{}
+
+{}
+
+[Documentation](#{}) · [Report Bug](https://github.com/{}/issues) · [Request Feature](https://github.com/{}/issues)
+
+{}</div>
+
+## 📋 Table of Contents
+- [About](#about)
+- [Features](#features)
+- [Built With](#built-with)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+
+## 🔍 About
+{}
+
+## ✨ Features
+{}
+
+## 🛠️ Built With
+{}
+
+## 🚀 Getting Started
+
+### Prerequisites
+{}
+
+### Installation
+{}
+
+## 💡 Usage
+```bash
+{}
+```
+
+## 📚 API Documentation
+```
+{}
+```
+
+## 🧪 Testing
+{}
+
+## 🤝 Contributing
+{}
+
+## 📝 License
+This project is licensed under the {} - see the [LICENSE](LICENSE) file for details.
+
+## 👥 Authors
+{}
+
+---
+<div align="center">
+Made with ❤️ by contributors
+</div>"#,
+            // Title and badges section
+            project_title,
+            short_desc,
+            badges.join("\n"),
+            repo_name,
+            repo_name,
+            repo_name,
+            if !tech_badges.is_empty() { tech_badges.join(" ") } else { String::from("<Technology badges>") },
+            // Main content
+            detailed_desc,
+            features_list,
+            if technologies.is_empty() || technologies[0].is_empty() {
+                String::from("- <Technologies used>")
+            } else {
+                technologies.iter()
+                    .map(|t| format!("- {}", t.trim()))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            },
+            prereq_list,
+            install_steps,
+            usage,
+            api_docs,
+            test_steps,
+            contributing,
+            license,
+            if authors.is_empty() || authors[0].is_empty() {
+                String::from("- <Project authors>")
+            } else {
+                authors.iter()
+                    .map(|a| format!("- {}", a.trim()))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }
         )
     }
 }
@@ -350,54 +544,104 @@ fn ui<B: ratatui::backend::Backend>(f: &mut Frame<B>, app: &App) {
 }
 
 fn generate_readme(app: &App) {
-    let repository_name = &app.fields[0].value;
-    let project_description = &app.fields[1].value;
-    let installation = &app.fields[2].value;
-    let usage = &app.fields[3].value;
-    let contributors = &app.fields[4].value;
-    let license = &app.license_options[app.selected_license];
-
-    let stars_badge = format!("[![GitHub stars](https://img.shields.io/github/stars/{repository_name})](https://github.com/{repository_name}/stargazers)");
-    let forks_badge = format!("[![GitHub forks](https://img.shields.io/github/forks/{repository_name})](https://github.com/{repository_name}/network/members)");
-    let issues_badge = format!("[![GitHub issues](https://img.shields.io/github/issues/{repository_name})](https://github.com/{repository_name}/issues)");
-    let license_badge = format!("[![GitHub license](https://img.shields.io/github/license/{repository_name})](https://github.com/{repository_name}/blob/master/LICENSE)");
-
     let markdown_content = format!(
-        r#"# {repository_name}
-{project_description}
+        r#"<div align="center">
 
-## Table of Contents
-- [Installation](#installation)
+# {}
+
+{}
+
+[![Stars](https://img.shields.io/github/stars/{}?style=flat-square)](https://github.com/{}/stargazers)
+[![Forks](https://img.shields.io/github/forks/{}?style=flat-square)](https://github.com/{}/network/members)
+[![Issues](https://img.shields.io/github/issues/{}?style=flat-square)](https://github.com/{}/issues)
+[![License](https://img.shields.io/github/license/{}?style=flat-square)](https://github.com/{}/blob/main/LICENSE)
+
+[Documentation](#{}) · [Report Bug](https://github.com/{}/issues) · [Request Feature](https://github.com/{}/issues)
+
+</div>
+
+## 📋 Table of Contents
+- [About](#about)
+- [Features](#features)
+- [Built With](#built-with)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
 - [Usage](#usage)
-- [Contributors](#contributors)
+- [API Documentation](#api-documentation)
+- [Testing](#testing)
+- [Contributing](#contributing)
 - [License](#license)
-- [Badges](#badges)
-- [GitHub Repository](#github-repository)
+- [Contact](#contact)
 
-## Installation
+## 🔍 About
+{}
+
+## ✨ Features
+{}
+
+## 🛠️ Built With
+{}
+
+## 🚀 Getting Started
+
+### Prerequisites
+{}
+
+### Installation
+{}
+
+## 💡 Usage
+```bash
+{}
 ```
-{installation}
+
+## 📚 API Documentation
+```
+{}
 ```
 
-## Usage
-```
-{usage}
-```
+## 🧪 Testing
+{}
 
-## Contributors
-{contributors}
+## 🤝 Contributing
+{}
 
-## License
-This project is licensed under the {license} - see the [LICENSE](LICENSE) file for details.
+## 📝 License
+This project is licensed under the {} - see the [LICENSE](LICENSE) file for details.
 
-## Badges
-{stars_badge} {forks_badge} {issues_badge} {license_badge}
+## 👥 Authors
+{}
 
-## GitHub Repository
-[Link to GitHub repository](https://github.com/{repository_name})
-"#
+---
+<div align="center">
+Made with ❤️ by contributors
+</div>"#,
+        app.fields[1].value,  // project_title (1)
+        app.fields[2].value,  // short_description (2)
+        app.fields[0].value,  // repository_name (3)
+        app.fields[0].value,  // repository_name (4)
+        app.fields[0].value,  // repository_name (5)
+        app.fields[0].value,  // repository_name (6)
+        app.fields[0].value,  // repository_name (7)
+        app.fields[0].value,  // repository_name (8)
+        app.fields[0].value,  // repository_name (9)
+        app.fields[0].value,  // repository_name (10)
+        app.fields[0].value,  // repository_name (11)
+        app.fields[0].value,  // repository_name (12)
+        app.fields[0].value,  // repository_name (13)
+        app.fields[3].value,  // detailed_description (14)
+        app.fields[4].value,  // features (15)
+        app.fields[5].value,  // technologies (16)
+        app.fields[6].value,  // prerequisites (17)
+        app.fields[7].value,  // installation (18)
+        app.fields[8].value,  // usage (19)
+        app.fields[9].value,  // api_docs (20)
+        app.fields[11].value, // tests (21)
+        app.fields[10].value, // contributing (22)
+        app.license_options[app.selected_license], // license (23)
+        app.fields[12].value  // authors (24)
     );
 
     fs::write("README.md", markdown_content).expect("Unable to write file");
-    println!("README.md generated successfully!");
 }
